@@ -10,7 +10,7 @@ A sleek, modern real-time chat application built with React, Express, Socket.IO,
 ### 1. Clone the repo:
 
 ```bash
-git clone https://github.com/yourusername/chat-app.git 
+git clone https://github.com/vijay-kumar-79/Talk-A-Tive.git
 cd chat-app
 ```
 ### 2. Setup .env Files
