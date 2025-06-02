@@ -52,10 +52,7 @@ const server = app.listen(port, () => {
 // ********************** Socket.IO Setup **********************
 
 const io = socket(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  },
+  cors: corsOptions,
 });
 
 let onlineUsers = new Map();
