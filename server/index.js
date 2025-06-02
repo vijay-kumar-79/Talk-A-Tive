@@ -9,16 +9,17 @@ const socket = require("socket.io");
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/msgRoutes");
 
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'https://talk-a-tive-eight.vercel.app',
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+};
+
 // middlewares
 const app = express();
 app.use(express.json());
-app.use(cors());
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Headers", "Origin, Content-Type");
-  next();
-});
+app.use(cors(corsOptions));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
