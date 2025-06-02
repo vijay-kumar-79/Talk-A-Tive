@@ -53,24 +53,38 @@ const server = app.listen(port, () => {
 // ********************** Socket.IO Setup **********************
 
 const io = socket(server, {
-  cors : {
-    origin : process.env.FRONTEND_URL,
-    credentials : true
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    credentials: true
   }
-})
+});
 
 let onlineUsers = new Map();
 
 io.on("connection", (socket) => {
-  let chatSocket = socket;
   socket.on("add-user", (userId) => {
     onlineUsers.set(userId, socket.id);
-  })
+  });
 
   socket.on("send-msg", (data) => {
     const sendUserSocket = onlineUsers.get(data.to);
-    if(sendUserSocket){
-      socket.to(sendUserSocket).emit("msg-recieve", data.message);
+    if (sendUserSocket) {
+      // Emit the entire data object, not just the message
+      socket.to(sendUserSocket).emit("msg-receive", {
+        message: data.message,
+        image: data.image,
+        from: data.from
+      });
     }
-  })
-})
+  });
+
+  socket.on("disconnect", () => {
+    // Clean up disconnected users
+    for (let [userId, socketId] of onlineUsers.entries()) {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        break;
+      }
+    }
+  });
+});

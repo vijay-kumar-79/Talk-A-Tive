@@ -1,47 +1,56 @@
-import React, { useState } from "react";
-import { BsEmojiSmileFill } from "react-icons/bs";
+import React, { useState, useRef } from "react";
+import { BsEmojiSmileFill, BsImageFill } from "react-icons/bs";
 import { IoMdSend } from "react-icons/io";
 import styled from "styled-components";
 import EmojiPicker from "emoji-picker-react";
 
 export default function ChatInput({ handleSendMsg }) {
   const [msg, setMsg] = useState("");
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const fileInputRef = useRef(null);
+
   const handleEmojiPickerhideShow = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
 
-  function urlToEmojiUnicode(url) {
-    const match = url.match(/([0-9a-f-]+)\.png/i);
-    if (!match) return "";
-
-    const hexCodePoints = match[1].split("-");
-    return hexCodePoints
-      .map((cp) => String.fromCodePoint(parseInt(cp, 16)))
-      .join("");
-  }
-
   const handleEmojiClick = (event, emojiObject) => {
-    let emojiChar;
-    // Option 1: If emojiObject.emoji is available (Unicode string)
     if (emojiObject.emoji) {
-      emojiChar = emojiObject.emoji;
+      setMsg((prev) => prev + emojiObject.emoji);
     }
-    // Option 2: Fallback to parsing from image URL
-    else if (emojiObject.target?.src) {
-      emojiChar = urlToEmojiUnicode(emojiObject.target.src);
-    }
+  };
 
-    if (emojiChar) {
-      setMsg((prev) => prev + emojiChar);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImage(null);
+    setPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
   const sendChat = (event) => {
     event.preventDefault();
-    if (msg.length > 0) {
-      handleSendMsg(msg);
+    if (msg.length > 0 || image) {
+      handleSendMsg(msg, image);
       setMsg("");
+      setImage(null);
+      setPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -57,11 +66,29 @@ export default function ChatInput({ handleSendMsg }) {
             />
           )}
         </div>
+        <div className="image-upload">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handleImageChange}
+            style={{ display: "none" }}
+          />
+          <BsImageFill onClick={() => fileInputRef.current.click()} />
+        </div>
       </div>
-      <form className="input-container" onSubmit={(event) => sendChat(event)}>
+      <form className="input-container" onSubmit={sendChat}>
+        {preview && (
+          <div className="image-preview">
+            <img src={preview} alt="Preview" />
+            <button type="button" onClick={removeImage} className="remove-btn">
+              ×
+            </button>
+          </div>
+        )}
         <input
           type="text"
-          placeholder="type your message here"
+          placeholder="Type your message here"
           onChange={(e) => setMsg(e.target.value)}
           value={msg}
         />
@@ -76,54 +103,40 @@ export default function ChatInput({ handleSendMsg }) {
 const Container = styled.div`
   display: grid;
   align-items: center;
-  grid-template-columns: 5% 95%;
+  grid-template-columns: 10% 90%;
   background-color: #080420;
   padding: 0 2rem;
   @media screen and (min-width: 720px) and (max-width: 1080px) {
     padding: 0 1rem;
     gap: 1rem;
   }
+  
   .button-container {
     display: flex;
     align-items: center;
     color: white;
     gap: 1rem;
-    .emoji {
+    
+    .emoji, .image-upload {
       position: relative;
       svg {
         font-size: 1.5rem;
         color: #ffff00c8;
         cursor: pointer;
-      }
-      .emoji-picker-react {
-        position: absolute;
-        top: -470px;
-        /* display: none; */
-        background-color: #080420;
-        box-shadow: 0 5px 10px #9a86f3;
-        border-color: #9a86f3;
-        .emoji-scroll-wrapper::-webkit-scrollbar {
-          background-color: #080420;
-          width: 5px;
-          &-thumb {
-            background-color: #9a86f3;
-          }
-        }
-        .emoji-categories {
-          button {
-            filter: contrast(0);
-          }
-        }
-        .emoji-search {
-          background-color: transparent;
-          border-color: #9a86f3;
-        }
-        .emoji-group:before {
-          background-color: #080420;
+        &:hover {
+          color: #ffff00;
         }
       }
     }
+    
+    .image-upload svg {
+      color: #00a8ffc8;
+      &:hover {
+        color: #00a8ff;
+      }
+    }
   }
+
   .input-container {
     width: 100%;
     border-radius: 2rem;
@@ -131,6 +144,43 @@ const Container = styled.div`
     align-items: center;
     gap: 2rem;
     background-color: #ffffff34;
+    padding: 0.5rem;
+    position: relative;
+    
+    .image-preview {
+      position: absolute;
+      bottom: 4rem;
+      left: 0;
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .remove-btn {
+        position: absolute;
+        top: 0.2rem;
+        right: 0.2rem;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+    
     input {
       width: 90%;
       height: 60%;
@@ -139,7 +189,7 @@ const Container = styled.div`
       border: none;
       padding-left: 1rem;
       font-size: 1.2rem;
-
+      
       &::selection {
         background-color: #9a86f3;
       }
@@ -147,6 +197,7 @@ const Container = styled.div`
         outline: none;
       }
     }
+    
     button {
       padding: 0.3rem 2rem;
       border-radius: 2rem;
@@ -155,12 +206,14 @@ const Container = styled.div`
       align-items: center;
       background-color: #9a86f3;
       border: none;
+      
       @media screen and (min-width: 720px) and (max-width: 1080px) {
         padding: 0.3rem 1rem;
         svg {
           font-size: 1rem;
         }
       }
+      
       svg {
         font-size: 2rem;
         color: white;
