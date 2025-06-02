@@ -221,6 +221,7 @@ const Container = styled.div`
           img {
             max-width: 100%;
             max-height: 200px;
+            max-width: 300px;
             border-radius: 0.5rem;
             object-fit: contain;
             cursor: pointer;
