@@ -9,34 +9,15 @@ const socket = require("socket.io");
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/msgRoutes");
 
-// Enhanced CORS configuration
-const allowedOrigins = [
-  'https://talk-a-tive-eight.vercel.app',
-  'http://localhost:3000' // for local development
-];
-
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: ["https://talk-a-tive-eight.vercel.app", "http://localhost:3000"],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
-
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests
-app.options('*', cors(corsOptions));
 
 // middlewares
 const app = express();
 app.use(express.json());
+app.use(cors(corsOptions));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
@@ -73,8 +54,8 @@ const server = app.listen(port, () => {
 const io = socket(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
 let onlineUsers = new Map();
@@ -91,7 +72,7 @@ io.on("connection", (socket) => {
       socket.to(sendUserSocket).emit("msg-receive", {
         message: data.message,
         image: data.image,
-        from: data.from
+        from: data.from,
       });
     }
   });
