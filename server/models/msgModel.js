@@ -15,11 +15,18 @@ const msgSchema = mongoose.Schema(
       ref: "User",
       required: true,
     },
+    isGroup: {
+      type: Boolean,
+      default: false
+    },
+    group: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group"
+    }
   },
   { timestamps: true }
 );
 
-// Validation to ensure either text or image exists
 msgSchema.pre('save', function(next) {
   if (!this.message.text && !this.message.image) {
     throw new Error('Message must contain either text or image');

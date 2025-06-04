@@ -4,6 +4,7 @@ import ChatInput from "./ChatInput";
 import axios from "axios";
 import { getAllMessagesRoute, sendMessageRoute } from "../utils/APIRoutes";
 import { useEffect, useRef, useState } from "react";
+import GroupSettings from "./GroupSettings";
 
 function ChatContainer({ currentChat, currentUser, socket }) {
   const [messages, setMessages] = useState([]);
@@ -11,42 +12,45 @@ function ChatContainer({ currentChat, currentUser, socket }) {
   const scrollRef = useRef();
 
   const handleSendMsg = async (msg, imageFile) => {
-    const formData = new FormData();
-    formData.append("from", currentUser._id);
-    formData.append("to", currentChat._id);
-    if (msg) formData.append("message", msg);
-    if (imageFile) formData.append("image", imageFile);
+  const formData = new FormData();
+  formData.append("from", currentUser._id);
+  formData.append("to", currentChat._id);
+  formData.append("isGroup", currentChat.isGroup || false);  // This is crucial!
+  if (msg) formData.append("message", msg);
+  if (imageFile) formData.append("image", imageFile);
 
-    try {
-      const response = await axios.post(sendMessageRoute, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+  try {
+    const response = await axios.post(sendMessageRoute, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        "user-id": currentUser._id
+      },
+    });
+
+    if (response.data.message) {
+      const newMessage = {
+        fromSelf: true,
+        message: msg,
+        image: response.data.message.message.image,
+        timestamp: new Date(),
+        isGroup: currentChat.isGroup  // Include isGroup in frontend state
+      };
+
+      // Emit socket event with isGroup flag
+      socket.current.emit("send-msg", {
+        to: currentChat._id,
+        from: currentUser._id,
+        message: msg,
+        image: response.data.message.message.image,
+        isGroup: currentChat.isGroup
       });
 
-      if (response.data.message) {
-        const newMessage = {
-          fromSelf: true,
-          message: msg,
-          image: response.data.message.message.image,
-          timestamp: new Date(),
-        };
-
-        // Emit the same structure the backend expects
-        socket.current.emit("send-msg", {
-          to: currentChat._id,
-          from: currentUser._id,
-          message: msg,
-          image: response.data.message.message.image,
-        });
-
-        // Update local state immediately
-        setMessages((prev) => [...prev, newMessage]);
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
+      setMessages((prev) => [...prev, newMessage]);
     }
-  };
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};
 
   useEffect(() => {
     if (socket.current) {
@@ -78,13 +82,19 @@ function ChatContainer({ currentChat, currentUser, socket }) {
 
   useEffect(() => {
     const fetchMessages = async () => {
-      const response = await axios.post(getAllMessagesRoute, {
-        from: currentUser._id,
-        to: currentChat._id,
-      });
-      setMessages(response.data.projectedMessages || response.data);
+      if (currentChat) {
+        const response = await axios.post(getAllMessagesRoute, {
+          from: currentUser._id,
+          to: currentChat._id,
+          isGroup: currentChat.isGroup,
+          headers: {
+            "user-id": currentUser._id, 
+          },
+        });
+        setMessages(response.data.projectedMessages || response.data);
+      }
     };
-    if (currentChat) fetchMessages();
+    fetchMessages();
   }, [currentChat]);
 
   return (
@@ -92,15 +102,34 @@ function ChatContainer({ currentChat, currentUser, socket }) {
       <div className="chat-header">
         <div className="user-details upp">
           <div className="avatar">
-            <img
-              src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
-              alt=""
-            />
+            {currentChat.isGroup ? (
+              currentChat.avatarImage ? (
+                <img
+                  src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
+                  alt=""
+                />
+              ) : (
+                <div className="group-icon">G</div>
+              )
+            ) : (
+              <img
+                src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
+                alt=""
+              />
+            )}
           </div>
           <div className="username">
-            <h3>{currentChat.username}</h3>
+            <h3>
+              {currentChat.isGroup ? currentChat.name : currentChat.username}
+            </h3>
+            {currentChat.isGroup && (
+              <p>{currentChat.participants.length} members</p>
+            )}
           </div>
         </div>
+        {currentChat.isGroup && (
+          <GroupSettings group={currentChat} currentUser={currentUser} />
+        )}
         <Logout />
       </div>
       <div className="chat-messages">
@@ -253,6 +282,24 @@ const Container = styled.div`
         background-color: #9900ff20;
       }
     }
+  }
+`;
+
+const GroupHeader = styled.div`
+  display: flex;
+  align-items: center;
+
+  .group-icon {
+    height: 3rem;
+    width: 3rem;
+    border-radius: 50%;
+    background: #4e0eff;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 1rem;
   }
 `;
 

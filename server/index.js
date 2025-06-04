@@ -4,10 +4,12 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
 const socket = require("socket.io");
+const Group = require("./models/grpModel");
 
 // route imports
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/msgRoutes");
+const groupRoute = require("./routes/grpRoutes");
 
 const corsOptions = {
   origin: ["https://talk-a-tive-eight.vercel.app", "http://localhost:3000"],
@@ -42,6 +44,7 @@ app.get("/ping", (_, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/groups", groupRoute);
 
 // Listen on PORT
 const port = process.env.PORT || 5000;
@@ -62,15 +65,38 @@ io.on("connection", (socket) => {
     onlineUsers.set(userId, socket.id);
   });
 
-  socket.on("send-msg", (data) => {
-    const sendUserSocket = onlineUsers.get(data.to);
-    if (sendUserSocket) {
-      // Emit the entire data object, not just the message
-      socket.to(sendUserSocket).emit("msg-receive", {
-        message: data.message,
-        image: data.image,
-        from: data.from,
-      });
+   socket.on("send-msg", async (data) => {
+    try {
+      if (data.isGroup) {
+        // For group messages, broadcast to all group members
+        const group = await Group.findById(data.to).populate('participants');
+        if (!group) return;
+
+        group.participants.forEach(participant => {
+          const memberSocket = onlineUsers.get(participant._id.toString());
+          if (memberSocket) {
+            socket.to(memberSocket).emit("msg-receive", {
+              message: data.message,
+              image: data.image,
+              from: data.from,
+              isGroup: true,
+              groupId: data.to
+            });
+          }
+        });
+      } else {
+        // Existing 1:1 chat logic
+        const sendUserSocket = onlineUsers.get(data.to);
+        if (sendUserSocket) {
+          socket.to(sendUserSocket).emit("msg-receive", {
+            message: data.message,
+            image: data.image,
+            from: data.from
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Socket message error:", err);
     }
   });
 

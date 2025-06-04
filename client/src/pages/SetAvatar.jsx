@@ -55,6 +55,9 @@ export default function SetAvatar() {
 
     const { data } = await axios.post(`${setAvatarRoute}/${user._id}`, {
       image: avatars[selectedAvatar],
+      headers: {
+        "user-id": user._id,
+      },
     });
     console.log(data);
 
@@ -155,7 +158,7 @@ const Container = styled.div`
     }
   }
 
-  h3{
+  h3 {
     color: red;
     font-size: 1.3rem;
   }

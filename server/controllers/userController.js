@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel.js");
+const mongoose = require("mongoose");
 
 module.exports.register = async (req, res, next) => {
   try {
@@ -78,6 +79,11 @@ module.exports.setAvatar = async (req, res, next) => {
 
 module.exports.getAllUsers = async (req, res, next) => {
   try {
+    // Verify the ID is valid before querying
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const users = await User.find({ _id: { $ne: req.params.id } }).select([
       "email",
       "username",
