@@ -10,13 +10,13 @@ module.exports.createGroup = async (req, res, next) => {
 
     // Convert string IDs to ObjectIds if needed
     const participantIds = participants.map((id) =>
-      mongoose.Types.ObjectId(id)
+      new mongoose.Types.ObjectId(id)
     );
 
     const group = await Group.create({
       name,
-      admin: mongoose.Types.ObjectId(admin), // Ensure proper casting
-      participants: [...participantIds, mongoose.Types.ObjectId(admin)],
+      admin: new mongoose.Types.ObjectId(admin),
+      participants: [...participantIds, new mongoose.Types.ObjectId(admin)],
     });
 
     // Populate the data before returning
