@@ -5,12 +5,13 @@ import styled from "styled-components";
 const GroupSettings = ({ group, currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [members, setMembers] = useState(group.participants);
+  const backend = process.env.REACT_APP_BACKEND_URL;
 
   const removeMember = async (userId) => {
     const userData = JSON.parse(localStorage.getItem("chat-app-user"));
     try {
       await axios.post(
-        "http://localhost:5000/api/groups/remove",
+        `${backend}/api/groups/remove`,
         {
           groupId: group._id,
           userId,

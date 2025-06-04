@@ -13,6 +13,7 @@ function Contacts({ contacts, changeChat }) {
   const [activeTab, setActiveTab] = useState("chats");
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [groups, setGroups] = useState([]);
+  const backend = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
     const setUser = async () => {
@@ -28,7 +29,7 @@ function Contacts({ contacts, changeChat }) {
       if (currentUserName) {
         const userData = JSON.parse(localStorage.getItem("chat-app-user"));
         const { data } = await axios.get(
-          "http://localhost:5000/api/groups/user",
+          `${backend}/api/groups/user`,
           {
             headers: {
               "user-id": userData._id, // Add this line

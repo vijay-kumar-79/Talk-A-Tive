@@ -7,6 +7,7 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const backend = process.env.REACT_APP_BACKEND_URL;
 
   // Fetch users when component mounts
   useEffect(() => {
@@ -15,7 +16,7 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
         const userData = JSON.parse(localStorage.getItem("chat-app-user"));
         // Remove the hardcoded "current-user-id" and use the actual user ID
         const { data } = await axios.get(
-          `http://localhost:5000/api/auth/allusers/${userData._id}`,
+          `${backend}/api/auth/allusers/${userData._id}`,
           {
             headers: {
               "user-id": userData._id,
@@ -38,7 +39,7 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
     try {
       const userData = JSON.parse(localStorage.getItem("chat-app-user"));
       const { data } = await axios.post(
-        "http://localhost:5000/api/groups",
+        `${backend}/api/groups`,
         {
           name: name,
           participants: selectedUsers,
