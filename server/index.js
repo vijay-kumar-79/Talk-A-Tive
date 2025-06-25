@@ -65,40 +65,54 @@ io.on("connection", (socket) => {
     onlineUsers.set(userId, socket.id);
   });
 
-   socket.on("send-msg", async (data) => {
-    try {
-      if (data.isGroup) {
-        // For group messages, broadcast to all group members
-        const group = await Group.findById(data.to).populate('participants');
-        if (!group) return;
+  socket.on("send-msg", async (data) => {
+  try {
+    if (data.isGroup) {
+      const group = await Group.findById(data.to).populate("participants");
+      if (!group) return;
 
-        group.participants.forEach(participant => {
-          const memberSocket = onlineUsers.get(participant._id.toString());
-          if (memberSocket) {
-            socket.to(memberSocket).emit("msg-receive", {
-              message: data.message,
-              image: data.image,
-              from: data.from,
-              isGroup: true,
-              groupId: data.to
-            });
-          }
-        });
-      } else {
-        // Existing 1:1 chat logic
-        const sendUserSocket = onlineUsers.get(data.to);
-        if (sendUserSocket) {
-          socket.to(sendUserSocket).emit("msg-receive", {
-            message: data.message,
-            image: data.image,
-            from: data.from
+      // Emit to ALL participants including sender (for consistent view)
+      group.participants.forEach((participant) => {
+        const memberSocket = onlineUsers.get(participant._id.toString());
+        if (memberSocket) {
+          io.to(memberSocket).emit("msg-receive", {
+            ...data,
+            groupId: data.to, // Important for group identification
+            timestamp: new Date(),
+            fromSelf: participant._id.toString() === data.from,
+            sender: data.sender || { // Ensure sender info is always included
+              _id: data.from,
+              username: data.sender?.username || "Unknown",
+              avatarImage: data.sender?.avatarImage || ""
+            }
           });
         }
+      });
+    } else {
+      // 1:1 chat logic remains the same
+      const recipientSocket = onlineUsers.get(data.to);
+      const senderSocket = onlineUsers.get(data.from);
+
+      if (recipientSocket) {
+        io.to(recipientSocket).emit("msg-receive", {
+          ...data,
+          timestamp: new Date(),
+          fromSelf: false
+        });
       }
-    } catch (err) {
-      console.error("Socket message error:", err);
+
+      if (senderSocket) {
+        io.to(senderSocket).emit("msg-receive", {
+          ...data,
+          timestamp: new Date(),
+          fromSelf: true
+        });
+      }
     }
-  });
+  } catch (err) {
+    console.error("Socket message error:", err);
+  }
+});
 
   socket.on("disconnect", () => {
     // Clean up disconnected users

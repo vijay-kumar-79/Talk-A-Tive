@@ -5,76 +5,78 @@ import axios from "axios";
 import { getAllMessagesRoute, sendMessageRoute } from "../utils/APIRoutes";
 import { useEffect, useRef, useState } from "react";
 import GroupSettings from "./GroupSettings";
+import grpAvatar from "../assets/grpAvatar.png";
 
 function ChatContainer({ currentChat, currentUser, socket }) {
   const [messages, setMessages] = useState([]);
-  const [arrivalMsg, setArrivalMsg] = useState(null);
   const scrollRef = useRef();
 
   const handleSendMsg = async (msg, imageFile) => {
-  const formData = new FormData();
-  formData.append("from", currentUser._id);
-  formData.append("to", currentChat._id);
-  formData.append("isGroup", currentChat.isGroup || false);  // This is crucial!
-  if (msg) formData.append("message", msg);
-  if (imageFile) formData.append("image", imageFile);
+    const formData = new FormData();
+    formData.append("from", currentUser._id);
+    formData.append("to", currentChat._id);
+    formData.append("isGroup", Boolean(currentChat?.isGroup));
+    if (msg) formData.append("message", msg);
+    if (imageFile) formData.append("image", imageFile);
 
-  try {
-    const response = await axios.post(sendMessageRoute, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        "user-id": currentUser._id
-      },
-    });
-
-    if (response.data.message) {
-      const newMessage = {
-        fromSelf: true,
-        message: msg,
-        image: response.data.message.message.image,
-        timestamp: new Date(),
-        isGroup: currentChat.isGroup  // Include isGroup in frontend state
-      };
-
-      // Emit socket event with isGroup flag
-      socket.current.emit("send-msg", {
-        to: currentChat._id,
-        from: currentUser._id,
-        message: msg,
-        image: response.data.message.message.image,
-        isGroup: currentChat.isGroup
+    try {
+      const response = await axios.post(sendMessageRoute, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "user-id": currentUser._id,
+        },
       });
 
-      setMessages((prev) => [...prev, newMessage]);
+      if (response.data.message) {
+        // Emit socket event with complete data
+        socket.current.emit("send-msg", {
+          to: currentChat._id,
+          from: currentUser._id,
+          message: msg,
+          image: response.data.message.message.image,
+          isGroup: currentChat.isGroup,
+          sender: {
+            _id: currentUser._id,
+            username: currentUser.username,
+            avatarImage: currentUser.avatarImage,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
     }
-  } catch (error) {
-    console.error("Error sending message:", error);
-  }
-};
+  };
 
   useEffect(() => {
-    if (socket.current) {
-      socket.current.on("msg-receive", (data) => {
-        setArrivalMsg({
+  if (socket.current) {
+    const handleMessageReceive = (data) => {
+      // For group chats
+      if (data.isGroup && currentChat?.isGroup && data.groupId === currentChat._id) {
+        setMessages(prev => [...prev, {
+          ...data,
           fromSelf: data.from === currentUser._id,
-          message: data.message,
-          image: data.image,
-          timestamp: new Date(),
-        });
-      });
-    }
-
-    // Clean up the event listener
-    return () => {
-      if (socket.current) {
-        socket.current.off("msg-receive");
+          timestamp: new Date(data.timestamp),
+        }]);
+      }
+      // For 1:1 chats
+      else if (!data.isGroup && (data.from === currentChat?._id || data.to === currentChat?._id)) {
+        setMessages(prev => [...prev, {
+          ...data,
+          fromSelf: data.from === currentUser._id,
+          timestamp: new Date(data.timestamp),
+        }]);
       }
     };
-  }, [currentUser._id]);
 
-  useEffect(() => {
-    arrivalMsg && setMessages((prev) => [...prev, arrivalMsg]);
-  }, [arrivalMsg]);
+    socket.current.on("msg-receive", handleMessageReceive);
+
+    return () => {
+      if (socket.current) {
+        socket.current.off("msg-receive", handleMessageReceive);
+      }
+    };
+  }
+}, [currentChat, currentUser]); // Make sure these dependencies are correct
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,15 +85,24 @@ function ChatContainer({ currentChat, currentUser, socket }) {
   useEffect(() => {
     const fetchMessages = async () => {
       if (currentChat) {
-        const response = await axios.post(getAllMessagesRoute, {
-          from: currentUser._id,
-          to: currentChat._id,
-          isGroup: currentChat.isGroup,
-          headers: {
-            "user-id": currentUser._id, 
-          },
-        });
-        setMessages(response.data.projectedMessages || response.data);
+        try {
+          const response = await axios.post(
+            getAllMessagesRoute,
+            {
+              from: currentUser._id,
+              to: currentChat._id,
+              isGroup: currentChat.isGroup,
+            },
+            {
+              headers: {
+                "user-id": currentUser._id,
+              },
+            }
+          );
+          setMessages(response.data.projectedMessages);
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        }
       }
     };
     fetchMessages();
@@ -109,7 +120,7 @@ function ChatContainer({ currentChat, currentUser, socket }) {
                   alt=""
                 />
               ) : (
-                <div className="group-icon">G</div>
+                <img src={grpAvatar} alt="" />
               )
             ) : (
               <img
@@ -133,34 +144,50 @@ function ChatContainer({ currentChat, currentUser, socket }) {
         <Logout />
       </div>
       <div className="chat-messages">
-        {messages.map((message, index) => {
-          return (
-            <div ref={scrollRef} key={index}>
-              <div
-                className={`message ${
-                  message.fromSelf ? "sended" : "recieved"
-                }`}
-              >
-                <div className="content">
-                  {/* Only show image if it exists */}
-                  {message.image?.url && (
-                    <div className="message-image">
-                      <img
-                        src={message.image.url}
-                        alt=""
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
-                      />
-                    </div>
-                  )}
-                  {/* Only show text if it exists */}
-                  {message.message && <p>{message.message}</p>}
-                </div>
+        {messages.map((message, idx) => (
+          <div
+            ref={idx === messages.length - 1 ? scrollRef : null}
+            key={message._id || idx}
+          >
+            {message.isGroup && !message.fromSelf && message.sender && (
+              <div className="sender-info">
+                <img
+                  src={
+                    message.sender.avatarImage
+                      ? `data:image/svg+xml;base64,${message.sender.avatarImage}`
+                      : "/default-avatar.png"
+                  }
+                  alt={message.sender.username || "User"}
+                  className="sender-avatar"
+                />
+                <span className="sender-name">
+                  {message.sender.username || "Unknown"}
+                </span>
+              </div>
+            )}
+
+            <div
+              className={`message ${message.fromSelf ? "sended" : "recieved"}`}
+            >
+              <div className="content">
+                {message.image?.url && (
+                  <div className="message-image">
+                    <img
+                      src={message.image.url}
+                      alt=""
+                      onError={(e) => {
+                        e.target.src = "/image-error.png";
+                        e.target.onerror = null;
+                      }}
+                    />
+                  </div>
+                )}
+                {message.message && <p>{message.message}</p>}
+                {/* Removed the timestamp div completely */}
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
       <ChatInput handleSendMsg={handleSendMsg} />
     </Container>
@@ -225,6 +252,27 @@ const Container = styled.div`
         background-color: #ffffff39;
         width: 0.1rem;
         border-radius: 1rem;
+      }
+    }
+
+    .sender-info {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.3rem;
+      margin-left: 0.5rem;
+
+      .sender-avatar {
+        height: 1.5rem;
+        width: 1.5rem;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        object-fit: cover;
+      }
+
+      .sender-name {
+        color: #aaa;
+        font-size: 0.8rem;
+        font-weight: 500;
       }
     }
 

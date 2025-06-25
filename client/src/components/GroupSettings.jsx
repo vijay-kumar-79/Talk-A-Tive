@@ -54,7 +54,7 @@ const GroupSettings = ({ group, currentUser }) => {
           </MemberList>
           {group.admin._id === currentUser._id && (
             <AddMemberButton>
-              {/* Implement add member functionality */}
+              Add Members
             </AddMemberButton>
           )}
         </SettingsDropdown>
@@ -72,6 +72,7 @@ const SettingsContainer = styled.div`
     color: white;
     border: none;
     padding: 0.5rem 1rem;
+    margin-right: 0.6rem;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 0.9rem;

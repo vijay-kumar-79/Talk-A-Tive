@@ -56,18 +56,18 @@ function Contacts({ contacts, changeChat }) {
           </div>
           <div className="contacts">
             <div className="tabs">
-              <button
+              <StyledButton
                 className={activeTab === "chats" ? "active" : ""}
                 onClick={() => setActiveTab("chats")}
               >
                 Chats
-              </button>
-              <button
+              </StyledButton>
+              <StyledButton
                 className={activeTab === "groups" ? "active" : ""}
                 onClick={() => setActiveTab("groups")}
               >
                 Groups
-              </button>
+              </StyledButton>
             </div>
             {activeTab === "chats" ? (
               contacts.map((contact, index) => {
@@ -93,12 +93,12 @@ function Contacts({ contacts, changeChat }) {
               })
             ) : (
               <>
-                <button
+                <StyledButton
                   className="create-group-btn"
                   onClick={() => setShowCreateGroupModal(true)}
                 >
                   <FaPlus /> Create Group
-                </button>
+                </StyledButton>
                 {groups.map((group, index) => (
                   <div
                     key={group._id}
@@ -284,25 +284,24 @@ const GroupIcon = styled.div`
   font-size: 1.5rem;
 `;
 
-const CreateGroupButton = styled.button`
+const StyledButton = styled.button`
   background-color: #9a86f3;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.2rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0.2rem 0.3rem;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+  box-shadow: 0 2px 8px rgba(154, 134, 243, 0.08);
 
-  &:hover {
+  &:hover,
+  &.active {
     background-color: #7d6ac8;
-  }
-
-  svg {
-    font-size: 1rem;
+    color: #fffbe7;
+    box-shadow: 0 4px 16px rgba(154, 134, 243, 0.18);
   }
 `;
 
