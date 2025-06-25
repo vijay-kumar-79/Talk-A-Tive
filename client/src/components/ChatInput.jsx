@@ -199,6 +199,7 @@ const Container = styled.div`
     background-color: #ffffff34;
     padding: 0.5rem;
     position: relative;
+    margin-left: 20px;
 
     .image-preview {
       position: absolute;
