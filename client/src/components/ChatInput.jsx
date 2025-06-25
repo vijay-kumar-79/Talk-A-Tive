@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { BsEmojiSmileFill, BsImageFill } from "react-icons/bs";
 import { IoMdSend } from "react-icons/io";
 import styled from "styled-components";
@@ -10,6 +10,17 @@ export default function ChatInput({ handleSendMsg }) {
   const [preview, setPreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Close emoji picker on ESC key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setShowEmojiPicker(false);
+    };
+    if (showEmojiPicker) {
+      window.addEventListener("keydown", handleEsc);
+    }
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [showEmojiPicker]);
 
   const handleEmojiPickerhideShow = () => {
     setShowEmojiPicker(!showEmojiPicker);
@@ -110,14 +121,15 @@ const Container = styled.div`
     padding: 0 1rem;
     gap: 1rem;
   }
-  
+
   .button-container {
     display: flex;
     align-items: center;
     color: white;
     gap: 1rem;
-    
-    .emoji, .image-upload {
+
+    .emoji,
+    .image-upload {
       position: relative;
       svg {
         font-size: 1.5rem;
@@ -128,11 +140,52 @@ const Container = styled.div`
         }
       }
     }
-    
+
     .image-upload svg {
       color: #00a8ffc8;
       &:hover {
         color: #00a8ff;
+      }
+    }
+  }
+
+  .button-container {
+    display: flex;
+    align-items: center;
+    color: white;
+    gap: 1rem;
+    .emoji {
+      position: relative;
+      svg {
+        font-size: 1.5rem;
+        color: #ffff00c8;
+        cursor: pointer;
+      }
+      .emoji-picker-react {
+        position: absolute;
+        top: -470px;
+        background-color: #080420;
+        box-shadow: 0 5px 10px #9a86f3;
+        border-color: #9a86f3;
+        .emoji-scroll-wrapper::-webkit-scrollbar {
+          background-color: #080420;
+          width: 5px;
+          &-thumb {
+            background-color: #9a86f3;
+          }
+        }
+        .emoji-categories {
+          button {
+            filter: contrast(0);
+          }
+        }
+        .emoji-search {
+          background-color: transparent;
+          border-color: #9a86f3;
+        }
+        .emoji-group:before {
+          background-color: #080420;
+        }
       }
     }
   }
@@ -146,7 +199,7 @@ const Container = styled.div`
     background-color: #ffffff34;
     padding: 0.5rem;
     position: relative;
-    
+
     .image-preview {
       position: absolute;
       bottom: 4rem;
@@ -156,13 +209,13 @@ const Container = styled.div`
       border-radius: 0.5rem;
       overflow: hidden;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      
+
       img {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
-      
+
       .remove-btn {
         position: absolute;
         top: 0.2rem;
@@ -180,7 +233,7 @@ const Container = styled.div`
         justify-content: center;
       }
     }
-    
+
     input {
       width: 90%;
       height: 60%;
@@ -189,7 +242,7 @@ const Container = styled.div`
       border: none;
       padding-left: 1rem;
       font-size: 1.2rem;
-      
+
       &::selection {
         background-color: #9a86f3;
       }
@@ -197,7 +250,7 @@ const Container = styled.div`
         outline: none;
       }
     }
-    
+
     button {
       padding: 0.3rem 2rem;
       border-radius: 2rem;
@@ -206,14 +259,14 @@ const Container = styled.div`
       align-items: center;
       background-color: #9a86f3;
       border: none;
-      
+
       @media screen and (min-width: 720px) and (max-width: 1080px) {
         padding: 0.3rem 1rem;
         svg {
           font-size: 1rem;
         }
       }
-      
+
       svg {
         font-size: 2rem;
         color: white;
