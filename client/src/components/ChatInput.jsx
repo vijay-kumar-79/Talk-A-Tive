@@ -26,9 +26,25 @@ export default function ChatInput({ handleSendMsg }) {
     setShowEmojiPicker(!showEmojiPicker);
   };
 
-  const handleEmojiClick = (event, emojiObject) => {
-    if (emojiObject.emoji) {
-      setMsg((prev) => prev + emojiObject.emoji);
+  const handleEmojiClick = (emojiData) => {
+    // Debug: log the emoji data to see its structure
+    console.log("Emoji data:", emojiData);
+    
+    // Handle different possible emoji data structures
+    let emoji = null;
+    
+    if (emojiData) {
+      // Try different possible properties
+      emoji = emojiData.emoji || emojiData.native || emojiData.unified || emojiData;
+      
+      // If unified exists, convert it to emoji
+      if (!emoji && emojiData.unified) {
+        emoji = String.fromCodePoint(...emojiData.unified.split('-').map(hex => parseInt(hex, 16)));
+      }
+    }
+    
+    if (emoji && typeof emoji === 'string') {
+      setMsg((prev) => prev + emoji);
     }
   };
 
