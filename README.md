@@ -3,7 +3,7 @@
 
 A sleek, modern real-time chat application built with React, Express, Socket.IO, and MongoDB.
 
-**[Live Demo](https://talk-a-tive-eight.vercel.app/login)** | **[Demo Video](https://drive.google.com/file/d/1twGuzaWU0NhtOCqH_KiVDLZpqHtEvJh4/view?usp=sharing)**
+**[Live Demo](https://talk-a-tive-eight.vercel.app/login)** | **[Demo Video](https://drive.google.com/file/d/16-RDjeq9zvNTZhH76PuVxVObtjju0oH7/view?usp=sharing)**
 
 ## How to Run Locally
 
