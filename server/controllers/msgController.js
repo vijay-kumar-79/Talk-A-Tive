@@ -1,6 +1,7 @@
 const Messages = require("../models/msgModel");
-const { uploadToCloudinary } = require("../config/clodinary");
+const User = require("../models/userModel");
 const Group = require("../models/grpModel");
+const { uploadToCloudinary } = require("../config/clodinary");
 
 module.exports.addMessage = async (req, res, next) => {
   try {
@@ -33,7 +34,7 @@ module.exports.addMessage = async (req, res, next) => {
     const messageObj = {
       message: messageData,
       sender: from,
-      isGroup: isGroup, // Use the properly parsed boolean
+      isGroup: isGroup,
     };
 
     // Set proper reference
@@ -42,10 +43,7 @@ module.exports.addMessage = async (req, res, next) => {
       messageObj.users = []; // Explicit empty array for group messages
     } else {
       messageObj.users = [from, to];
-      messageObj.group = undefined; // Explicitly remove group reference
     }
-
-    console.log("Creating message:", messageObj); // Debug log
 
     const data = await Messages.create(messageObj);
 
@@ -79,10 +77,9 @@ module.exports.getMessages = async (req, res, next) => {
 
     const messages = await Messages.find(query)
       .sort({ createdAt: 1 })
-      .populate("sender", "username avatarImage")
-      .populate("group"); // Populate group if needed
+      .populate("sender", "username avatarImage");
 
-    let projectedMessages = messages.map((msg) => ({
+    const projectedMessages = messages.map((msg) => ({
       fromSelf: msg.sender._id.toString() === from,
       message: msg.message.text,
       image: msg.message.image,
@@ -94,8 +91,94 @@ module.exports.getMessages = async (req, res, next) => {
         avatarImage: msg.sender.avatarImage,
       },
     }));
-    res.json({projectedMessages : projectedMessages});
+    res.json({ projectedMessages });
   } catch (ex) {
     next(ex);
   }
 };
+
+// Chat list: everyone the user has exchanged 1:1 messages with, plus every
+// group they belong to, each with its last message for the sidebar preview.
+module.exports.getConversations = async (req, res, next) => {
+  try {
+    const me = req.user._id;
+
+    const groups = await Group.find({ participants: me })
+      .populate("admin", "username avatarImage")
+      .populate("participants", "username avatarImage");
+    const groupIds = groups.map((g) => g._id);
+
+    const [partnerIds, lastMessages] = await Promise.all([
+      Messages.distinct("users", { isGroup: false, users: me }).then((ids) =>
+        ids.filter((id) => id.toString() !== me.toString())
+      ),
+      Messages.aggregate([
+        {
+          $match: {
+            $or: [
+              { isGroup: false, users: me },
+              { isGroup: true, group: { $in: groupIds } },
+            ],
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        {
+          $group: {
+            // 1:1 messages group by the users array, group messages by group id
+            _id: { $cond: [{ $eq: ["$isGroup", true] }, "$group", "$users"] },
+            last: { $first: "$$ROOT" },
+          },
+        },
+      ]),
+    ]);
+
+    // Map conversation key (partner id or group id) -> last message
+    const lastByKey = new Map();
+    for (const row of lastMessages) {
+      const key = Array.isArray(row._id)
+        ? row._id.find((id) => id.toString() !== me.toString()).toString()
+        : row._id.toString();
+      lastByKey.set(key, row.last);
+    }
+
+    const project = (last) => {
+      const isImage = last && last.message.image && last.message.image.url;
+      return {
+        lastMessage: isImage
+          ? { image: last.message.image }
+          : last
+          ? { text: last.message.text }
+          : null,
+        lastMessageAt: last ? last.createdAt : null,
+        lastMessageFromSelf: last
+          ? last.sender.toString() === me.toString()
+          : false,
+      };
+    };
+
+    const users = await User.find({ _id: { $in: partnerIds } }).select(
+      "username avatarImage"
+    );
+    const userItems = users.map((u) => ({
+      _id: u._id,
+      name: u.username,
+      avatarImage: u.avatarImage,
+      isGroup: false,
+      ...project(lastByKey.get(u._id.toString())),
+    }));
+
+    const groupItems = groups.map((g) => ({
+      _id: g._id,
+      name: g.name,
+      avatarImage: g.avatarImage,
+      isGroup: true,
+      admin: g.admin,
+      participants: g.participants,
+      ...project(lastByKey.get(g._id.toString())),
+    }));
+
+    res.json([...userItems, ...groupItems]);
+  } catch (ex) {
+    next(ex);
+  }
+};

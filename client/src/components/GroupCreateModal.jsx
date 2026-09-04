@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import styled from "styled-components";
+import { avatarSrc } from "../utils/format";
 
 const GroupCreateModal = ({ onClose, onGroupCreated }) => {
   const [name, setName] = useState("");
@@ -14,7 +15,6 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
     const fetchUsers = async () => {
       try {
         const userData = JSON.parse(localStorage.getItem("chat-app-user"));
-        // Remove the hardcoded "current-user-id" and use the actual user ID
         const { data } = await axios.get(
           `${backend}/api/auth/allusers/${userData._id}`,
           {
@@ -26,10 +26,12 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
         setUsers(data);
       } catch (error) {
         console.error("Error fetching users:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchUsers();
-  }, []);
+  }, [backend]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,7 +53,7 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
         }
       );
 
-      // The response should now include populated admin/participants
+      // The response includes populated admin/participants
       onGroupCreated({
         ...data.group,
         admin: {
@@ -75,16 +77,16 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
   return (
     <ModalOverlay>
       <ModalContent>
-        <h2>Create New Group</h2>
+        <h2>New group</h2>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
-            placeholder="Group Name"
+            placeholder="Group name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <h3>Add Members</h3>
+          <h3>Add members</h3>
           <UserList>
             {users.map((user) => (
               <UserItem key={user._id}>
@@ -101,19 +103,20 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
                   }}
                 />
                 <label htmlFor={user._id}>
-                  <img
-                    src={`data:image/svg+xml;base64,${user.avatarImage}`}
-                    alt=""
-                  />
+                  <img src={avatarSrc(user.avatarImage)} alt="" />
                   <span>{user.username}</span>
                 </label>
               </UserItem>
             ))}
           </UserList>
-          <button type="submit">Create Group</button>
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+          <div className="actions">
+            <button type="button" className="cancel" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create"}
+            </button>
+          </div>
         </form>
       </ModalContent>
     </ModalOverlay>
@@ -122,37 +125,40 @@ const GroupCreateModal = ({ onClose, onGroupCreated }) => {
 
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background-color: rgba(11, 20, 26, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(2px);
 `;
 
 const ModalContent = styled.div`
-  background-color: #080420;
-  width: 90%;
-  max-width: 500px;
-  border-radius: 1rem;
-  padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  max-height: 80vh;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--divider);
+  width: min(92vw, 500px);
+  max-height: 85vh;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   overflow-y: auto;
 
   h2 {
-    color: white;
-    margin-bottom: 1.5rem;
+    color: var(--text);
+    margin-bottom: 1.25rem;
     text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
   }
 
   h3 {
-    color: white;
+    color: var(--text-secondary);
     margin: 1rem 0 0.5rem;
-    font-size: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   form {
@@ -162,83 +168,81 @@ const ModalContent = styled.div`
 
   input[type="text"] {
     width: 100%;
-    padding: 0.8rem;
-    border-radius: 0.5rem;
-    border: none;
-    margin-bottom: 1rem;
-    background-color: #ffffff34;
-    color: white;
-    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--divider);
+    background-color: var(--bg-elevated);
+    color: var(--text);
+    font-size: 0.95rem;
 
     &:focus {
       outline: none;
-      background-color: #ffffff4d;
+      border-color: var(--accent);
     }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
 
   button {
-    padding: 0.8rem;
-    border-radius: 0.5rem;
+    padding: 0.65rem 1.5rem;
+    border-radius: 8px;
     border: none;
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 0.95rem;
     cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-  }
+    transition: background 0.15s ease;
 
-  button[type="submit"] {
-    background-color: #9a86f3;
-    color: white;
-    margin-top: 1rem;
+    &.submit {
+      background-color: var(--accent);
+      color: #0b141a;
 
-    &:hover {
-      background-color: #7d6ac8;
+      &:hover:not(:disabled) {
+        background-color: var(--accent-strong);
+      }
+      &:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
     }
-  }
 
-  button[type="button"] {
-    background-color: transparent;
-    color: #9a86f3;
-    margin-top: 0.5rem;
+    &.cancel {
+      background: none;
+      color: var(--text-secondary);
 
-    &:hover {
-      color: #7d6ac8;
-      text-decoration: underline;
+      &:hover {
+        color: var(--text);
+      }
     }
   }
 `;
 
 const UserList = styled.div`
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
-  margin-bottom: 1rem;
-  border: 1px solid #9a86f3;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-
-  &::-webkit-scrollbar {
-    width: 0.3rem;
-
-    &-thumb {
-      background-color: #9a86f3;
-      border-radius: 1rem;
-    }
-  }
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 0.35rem;
 `;
 
 const UserItem = styled.div`
   display: flex;
   align-items: center;
-  padding: 0.5rem;
-  border-radius: 0.3rem;
-  transition: all 0.2s ease;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
 
   &:hover {
-    background-color: #ffffff1a;
+    background-color: var(--bg-elevated);
   }
 
   input[type="checkbox"] {
     margin-right: 0.8rem;
+    accent-color: var(--accent);
     cursor: pointer;
   }
 
@@ -247,21 +251,25 @@ const UserItem = styled.div`
     align-items: center;
     cursor: pointer;
     flex-grow: 1;
+    min-width: 0;
   }
 
   img {
-    width: 2rem;
-    height: 2rem;
+    width: 2.1rem;
+    height: 2.1rem;
     border-radius: 50%;
     margin-right: 0.8rem;
     object-fit: cover;
-    border: 1px solid #9a86f3;
+    flex-shrink: 0;
   }
 
   span {
-    color: white;
-    font-size: 0.9rem;
+    color: var(--text);
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 `;
 
-export default GroupCreateModal;
+export default GroupCreateModal;

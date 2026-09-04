@@ -48,16 +48,4 @@ const msgSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-// Add pre-save validation
-msgSchema.pre('save', function(next) {
-  if (this.isGroup && !this.group) {
-    throw new Error('Group messages must have a group reference');
-  }
-  if (!this.isGroup && (!this.users || this.users.length !== 2)) {
-    throw new Error('Private messages must have exactly 2 users');
-  }
-  next();
-});
-
-// Remove the pre-save hook since we're using validators
 module.exports = mongoose.model("Messages", msgSchema);

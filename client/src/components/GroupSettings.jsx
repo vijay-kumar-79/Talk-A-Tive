@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import styled from "styled-components";
+import { avatarSrc } from "../utils/format";
 
 const GroupSettings = ({ group, currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,35 +29,35 @@ const GroupSettings = ({ group, currentUser }) => {
     }
   };
 
+  const isAdmin = group.admin._id === currentUser._id;
+
   return (
     <SettingsContainer>
-      <button onClick={() => setIsOpen(!isOpen)}>Group Settings</button>
+      <button className="settings-btn" onClick={() => setIsOpen(!isOpen)}>
+        Group info
+      </button>
       {isOpen && (
         <SettingsDropdown>
-          <h3>Group Members</h3>
+          <h3>Members ({members.length})</h3>
           <MemberList>
             {members.map((member) => (
               <MemberItem key={member._id}>
-                <img
-                  src={`data:image/svg+xml;base64,${member.avatarImage}`}
-                  alt=""
-                />
-                <span>{member.username}</span>
-                {group.admin._id === currentUser._id &&
-                  member._id !== currentUser._id && (
-                    <button onClick={() => removeMember(member._id)}>
-                      Remove
-                    </button>
-                  )}
-                {member._id === group.admin._id && <span>(Admin)</span>}
+                <img src={avatarSrc(member.avatarImage)} alt="" />
+                <span className="member-name">{member.username}</span>
+                {member._id === group.admin._id && (
+                  <span className="admin-tag">admin</span>
+                )}
+                {isAdmin && member._id !== currentUser._id && (
+                  <button
+                    className="remove-btn"
+                    onClick={() => removeMember(member._id)}
+                  >
+                    Remove
+                  </button>
+                )}
               </MemberItem>
             ))}
           </MemberList>
-          {group.admin._id === currentUser._id && (
-            <AddMemberButton>
-              Add Members
-            </AddMemberButton>
-          )}
         </SettingsDropdown>
       )}
     </SettingsContainer>
@@ -65,109 +66,109 @@ const GroupSettings = ({ group, currentUser }) => {
 
 const SettingsContainer = styled.div`
   position: relative;
-  margin-left: auto;
+  display: flex;
 
-  button {
-    background-color: #9a86f3;
-    color: white;
+  .settings-btn {
+    background: none;
     border: none;
-    padding: 0.5rem 1rem;
-    margin-right: 0.6rem;
-    border-radius: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
 
     &:hover {
-      background-color: #7d6ac8;
+      background: var(--bg-hover);
+      color: var(--text);
     }
   }
 `;
 
 const SettingsDropdown = styled.div`
   position: absolute;
-  top: 100%;
+  top: calc(100% + 0.5rem);
   right: 0;
   width: 300px;
-  background-color: #080420;
-  border: 1px solid #9a86f3;
-  border-radius: 0.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
   padding: 1rem;
-  z-index: 10;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 30;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 
   h3 {
-    color: white;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-    border-bottom: 1px solid #9a86f3;
-    padding-bottom: 0.5rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--divider);
+    padding-bottom: 0.6rem;
   }
 `;
 
 const MemberList = styled.ul`
   list-style: none;
-  max-height: 200px;
-  overflow-y: auto;
-  margin-bottom: 1rem;
-
-  &::-webkit-scrollbar {
-    width: 0.3rem;
-
-    &-thumb {
-      background-color: #9a86f3;
-      border-radius: 1rem;
-    }
-  }
 `;
 
 const MemberItem = styled.li`
   display: flex;
   align-items: center;
-  padding: 0.5rem;
-  border-radius: 0.3rem;
-  margin-bottom: 0.5rem;
-  background-color: #ffffff0a;
-  transition: all 0.2s ease;
+  gap: 0.7rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+  transition: background 0.15s ease;
 
   &:hover {
-    background-color: #ffffff1a;
+    background-color: var(--bg-elevated);
   }
 
   img {
-    width: 2rem;
-    height: 2rem;
+    width: 2.1rem;
+    height: 2.1rem;
     border-radius: 50%;
-    margin-right: 0.8rem;
     object-fit: cover;
-    border: 1px solid #9a86f3;
+    flex-shrink: 0;
   }
 
-  span {
-    color: white;
-    flex-grow: 1;
+  .member-name {
+    color: var(--text);
+    flex: 1;
     font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  button {
-    background-color: #ff4d4d;
+  .admin-tag {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .remove-btn {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger);
     padding: 0.3rem 0.6rem;
-    font-size: 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
 
     &:hover {
-      background-color: #e60000;
+      background: var(--danger);
+      color: #0b141a;
     }
   }
 `;
 
-const AddMemberButton = styled.button`
-  width: 100%;
-  background-color: #4e0eff !important;
-  margin-top: 0.5rem;
-
-  &:hover {
-    background-color: #3a00cc !important;
-  }
-`;
-
-export default GroupSettings;
+export default GroupSettings;

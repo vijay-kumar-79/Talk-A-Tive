@@ -1,6 +1,11 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel.js");
-const mongoose = require("mongoose");
+
+// Strip the password hash before sending a user document to the client
+const safeUser = (user) => {
+  const { password, ...rest } = user.toObject();
+  return rest;
+};
 
 module.exports.register = async (req, res, next) => {
   try {
@@ -12,15 +17,13 @@ module.exports.register = async (req, res, next) => {
     if (emailCheck)
       return res.json({ msg: "Email already used", status: false });
 
-    // Hash the password with salt of 10
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       username,
       email,
       password: hashedPassword,
     });
-    delete user.password;
-    return res.json({ status: true, user });
+    return res.json({ status: true, user: safeUser(user) });
   } catch (err) {
     next(err);
   }
@@ -33,24 +36,11 @@ module.exports.login = async (req, res, next) => {
 
     if (!user) return res.json({ msg: "User not found", status: false });
 
-    // check for the password correctness
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-
     if (!isPasswordCorrect)
-      res.json({ msg: "Wrong Password, Please try again", status: false });
+      return res.json({ msg: "Wrong Password, Please try again", status: false });
 
-    delete user.password;
-    res.json({ status: true, user });
-  } catch (ex) {
-    next(ex);
-  }
-};
-
-module.exports.logout = (req, res, next) => {
-  try {
-    if (!req.params.id) return res.json({ msg: "User id is required " });
-    onlineUsers.delete(req.params.id);
-    return res.status(200).send();
+    res.json({ status: true, user: safeUser(user) });
   } catch (ex) {
     next(ex);
   }
@@ -79,11 +69,6 @@ module.exports.setAvatar = async (req, res, next) => {
 
 module.exports.getAllUsers = async (req, res, next) => {
   try {
-    // Verify the ID is valid before querying
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid user ID" });
-    }
-
     const users = await User.find({ _id: { $ne: req.params.id } }).select([
       "email",
       "username",
@@ -95,3 +80,21 @@ module.exports.getAllUsers = async (req, res, next) => {
     next(ex);
   }
 };
+
+// Users you have NOT yet chatted with (for the New Chat modal)
+module.exports.getNewChatUsers = async (req, res, next) => {
+  try {
+    const Messages = require("../models/msgModel");
+    const me = req.params.id;
+    const partnerIds = await Messages.distinct("users", {
+      isGroup: false,
+      users: me,
+    });
+    const users = await User.find({
+      _id: { $ne: me, $nin: partnerIds },
+    }).select(["username", "avatarImage", "_id"]);
+    return res.json(users);
+  } catch (ex) {
+    next(ex);
+  }
+};

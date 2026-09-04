@@ -5,3 +5,5 @@ export const setAvatarRoute = `${host}/api/auth/setAvatar`;
 export const allUsersRoute = `${host}/api/auth/allusers`;
 export const sendMessageRoute = `${host}/api/messages/addmsg`;
 export const getAllMessagesRoute = `${host}/api/messages/getmsg`;
+export const conversationsRoute = `${host}/api/messages/conversations`;
+export const newChatUsersRoute = `${host}/api/auth/newchatusers`;
