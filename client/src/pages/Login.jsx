@@ -59,7 +59,6 @@ function Login() {
         <AuthCard>
           <Brand>
             <img src={Logo} alt="" />
-            <h1>Talk-A-Tive</h1>
           </Brand>
           <AuthForm onSubmit={handleSubmit}>
             <AuthInput
@@ -86,4 +85,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Login;
