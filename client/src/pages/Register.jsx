@@ -83,7 +83,6 @@ function Register() {
         <AuthCard>
           <Brand>
             <img src={Logo} alt="" />
-            <h1>Talk-A-Tive</h1>
           </Brand>
           <AuthForm onSubmit={handleSubmit}>
             <AuthInput
@@ -122,4 +121,4 @@ function Register() {
   );
 }
 
-export default Register;
+export default Register;
